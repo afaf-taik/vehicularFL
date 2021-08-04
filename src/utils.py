@@ -1,6 +1,3 @@
-# -*- coding: utf-8 -*-
-# Python version: 3.6
-
 import copy
 import torch
 from torchvision import datasets, transforms
@@ -362,16 +359,13 @@ def build_model_by_cluster(w,s,clusters):
     n_clusters = max(np.unique(clusters))
     models = []
     for n in range(1,n_clusters+1):
-        c = np.argwhere(clusters== 0).flatten()
+        c = np.argwhere(clusters== n).flatten()
         w_temp = [w[i] for i in c]
         s_temp = [s[i] for i in c]
         models.append(average_weights(w_temp,s_temp))
     return models
 
-def preferences(models):
-    return
-
-def aggregate_clusterwise(w,s,clusters):
+def aggregate_clusterwise(w,s,clusters, models):
     return        
 
 

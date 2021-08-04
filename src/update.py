@@ -81,7 +81,6 @@ class LocalUpdate(object):
             epoch_loss.append(sum(batch_loss)/len(batch_loss))
 
         return model.state_dict(), sum(epoch_loss) / len(epoch_loss)
-
     def inference(self, model):
         """ Returns the inference accuracy and loss.
         """
@@ -89,7 +88,7 @@ class LocalUpdate(object):
         model.eval()
         loss, total, correct = 0.0, 0.0, 0.0
 
-        for batch_idx, (images, labels) in enumerate(self.testloader):
+        for batch_idx, (images, labels) in enumerate(self.trainloader):
             images, labels = images.to(self.device), labels.to(self.device)
 
             # Inference
@@ -105,6 +104,13 @@ class LocalUpdate(object):
 
         accuracy = correct/total
         return accuracy, loss
+    
+    def preferences(self,args,models):
+        pref = []
+        for model in models:
+            pref.append(self.inference(model))
+        return pref 
+
 
 
 def test_inference(args, model, test_dataset):
@@ -135,3 +141,8 @@ def test_inference(args, model, test_dataset):
 
     accuracy = correct/total
     return accuracy, loss
+
+
+
+def aggregate_clusterwise(w,s,clusters):
+    return        
