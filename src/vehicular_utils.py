@@ -6,16 +6,17 @@ from options import args_parser
 import math
 
 
-Power = 1 #Watt 
-Pmax = 5 #Watt #5 Watt is a high. You can use 1 Watt as the max.
+Power = 0.1 #Watt 
+Pmax = 1 #Watt #5 Watt is a high. You can use 1 Watt as the max.
 Ttrain_batch = 0.5 #seconds , time to train on a batch of SGD 
 LANES_SPEEDS = [[60,80],[80,100],[100,120],[-100,-120],[-80,-100],[-60,-80]] # km/h , to be changed to m/s #Negative speeds?
 num_lanes = 6  
-LANES_Y = [3.3 + 3.6*k for k in range(num_lanes)] # what do you mean by this? for k = 0, LANES_Y[0] = 3.3, meaning?
-xyBSs = np.vstack((1000,0)) # BS is on the side of the road at the 1km mark # You can put it at the side of the road, like (1000, 25)?
+LANES_Y = [3.3 + 3.6*k for k in range(num_lanes)] # what do you mean by this? for k = 0, LANES_Y[0] = 3.3, meaning? # just which lane they are
+#We can also suppose that the width is negligible 
+xyBSs = np.vstack((1000,25)) # BS is on the side of the road at the 1km mark # You can put it at the side of the road, like (1000, 25)?
 numEpochs = 1  
 D = 2000 # Radius of 2km 
-TOTAL_RBs = 100 #Total number of RBs ( to be adjusted )
+TOTAL_RBs = 10 #Total number of RBs ( to be adjusted )
 BW = 180000   # Bandwidth of a RB Hz
 sig2_dBm = -114 # additive white Gaussian noise (dB)
 sig2_watts = 10 ** ((sig2_dBm-30)/10) # additive white Gaussian noise (watts)
@@ -33,7 +34,7 @@ def initialize(args, xmax = 2000, ymax = max(LANES_Y)):
 	TrainTime = [numEpochs*len(user_groups[i])*Ttrain_batch/args.local_bs for i in range(args.num_users)]
 
 #	Gains = channel_gain(args.num_users,1,TOTAL_RBs, xyEUs, xyBSs,0)
-	return TrainTime, gains, train_dataset, test_dataset, user_groups , y_positions , y 
+	return TrainTime, Gains, train_dataset, test_dataset, user_groups , y_positions , y , xyUEs
 
 
 def speeds(args,y):
@@ -80,7 +81,7 @@ def required_rate(Ttrain, T_k, S):
 			rates.append(S/( T_k[i] - Ttrain[i]))
 		else:
 			rates.append(math.inf)
-	return [ for i in range(len(Ttrain))]
+	return rates
 
 
 def dataRateRB(args, Gains):
@@ -142,6 +143,13 @@ def allocate(div_indicator,cost,dataRatesRBs):
 if __name__ == '__main__':
 	args = args_parser()	
 	args.num_users = 50
-	Ttrain, gains, train_dataset, test_dataset, user_groups , y_positions , y = initialize(args)
+	Ttrain, gains, train_dataset, test_dataset, user_groups , y_positions , y , xyUEs = initialize(args)
 	speed = speeds(args,y)
 	print(speed)
+	#sample of execution
+	#x should be inferred from xyUEs
+	#T_k = rate_stay(x,speeds)
+	#R = required_rate(Ttrain, T_k, S)
+	#c , dbrb = cost_in_RBs(R, args, gains)
+	#div_indicator = np.random.rand(args.num_users)
+	#scheduled, datarates_schedule = allocate(div_indicator,c,dbrb)
