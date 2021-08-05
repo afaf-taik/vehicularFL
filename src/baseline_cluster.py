@@ -129,11 +129,13 @@ for i in range (tries):
 			# plt.ylabel('Cosine Similarity')
 			# plt.show()
 			models = [ copy.deepcopy(global_model) for j in range(n_clusters_max)]
+			weights = [ models[j].state_dict() for j in range(len(models))]
 			preferences = {}
 
 			for j in range(1, max(clusters_found)+1):
-				models[j] = newmodel(args,models[j],global_model)
-				models[j] = build_model_by_cluster(local_weights,sizes,clusters_found,j)
+				newmodel(args,models[j],global_model)
+				weights[j] = build_model_by_cluster(local_weights,sizes,clusters_found,j)
+				models[j].load_state_dict(weights[j])
 				models[j].eval()
 				for c in range(args.num_users):
 					local_model = LocalUpdate(args=args, dataset=train_dataset,
