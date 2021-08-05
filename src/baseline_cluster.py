@@ -20,7 +20,7 @@ modelname = 'clustering'
 resdir = 'diversity_exp/' + 'baseline_'+ modelname 
 #os.mkdir(resdir)
 test_time = 1
-n_clusters_max = 2
+n_clusters_max = 4
 m = 6
 for i in range (tries):
 	expdir = resdir+'/exp'+str(i)
@@ -130,18 +130,18 @@ for i in range (tries):
 			# plt.show()
 			models = [ copy.deepcopy(global_model) for j in range(n_clusters_max)]
 			weights = [ models[j].state_dict() for j in range(len(models))]
-			preferences = {}
-
-			for j in range(1, max(clusters_found)+1):
+			preferences = np.zeros(shape= (args.num_users, len(models)))
+			for j in range(max(clusters_found)):
+				print('model=====',j)
 				newmodel(args,models[j],global_model)
 				weights[j] = build_model_by_cluster(local_weights,sizes,clusters_found,j)
 				models[j].load_state_dict(weights[j])
 				models[j].eval()
-				for c in range(args.num_users):
+				for g in range(args.num_users):
 					local_model = LocalUpdate(args=args, dataset=train_dataset,
-									  idxs=user_groups[idx], logger=logger)
-					acc, _ = local_model.inference(model=models[i])
-					preferences[c].append(acc)                    
+									  idxs=user_groups[g], logger=logger)
+					acc, _ = local_model.inference(model=models[j])
+					preferences[g][j] = acc                    
 
 					#list_acc.append(acc)
 			print('======================PREFERENCES==================',preferences)            

@@ -357,7 +357,7 @@ def average_weights(w,s):
 
 def build_model_by_cluster(w,s,clusters, cluster):
     #n_clusters = max(np.unique(clusters))
-    c = np.argwhere(clusters == cluster).flatten()
+    c = np.argwhere(clusters == cluster+1).flatten()
     w_temp = [w[i] for i in c]
     s_temp = [s[i] for i in c]    
     return average_weights(w_temp,s_temp)
