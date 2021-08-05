@@ -13,7 +13,7 @@ def args_parser():
                         help='the fraction of clients: C')
     parser.add_argument('--local_ep', type=int, default=1,
                         help="the number of local epochs: E")
-    parser.add_argument('--local_bs', type=int, default=5,
+    parser.add_argument('--local_bs', type=int, default=10,
                         help="local batch size: B")
     parser.add_argument('--lr', type=float, default=0.01,
                         help='learning rate')

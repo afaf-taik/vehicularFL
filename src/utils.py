@@ -355,15 +355,12 @@ def average_weights(w,s):
 
 ###########################################################
 
-def build_model_by_cluster(w,s,clusters):
-    n_clusters = max(np.unique(clusters))
-    models = []
-    for n in range(1,n_clusters+1):
-        c = np.argwhere(clusters== n).flatten()
-        w_temp = [w[i] for i in c]
-        s_temp = [s[i] for i in c]
-        models.append(average_weights(w_temp,s_temp))
-    return models
+def build_model_by_cluster(w,s,clusters, cluster):
+    #n_clusters = max(np.unique(clusters))
+    c = np.argwhere(clusters == cluster).flatten()
+    w_temp = [w[i] for i in c]
+    s_temp = [s[i] for i in c]    
+    return average_weights(w_temp,s_temp)
 
 def aggregate_clusterwise(w,s,clusters, models):
     return        
@@ -407,8 +404,17 @@ def models_similarity(l):
     for i in range(len(l)):
         for j in range(len(l)):
             #+1e-12
-            similarities[i][j] = 1 - torch.sum(weights[i]*weights[j])/(torch.norm(weights[i])*torch.norm(weights[j])) 
+            similarities[i][j] = 1 - torch.sum(weights[i]*weights[j])/(torch.norm(weights[i])*torch.norm(weights[j])+1e-15) 
             #similarities[j][i] = similarities[i][j]
     for i in range(len(l)):
         similarities[i][i] = 0 
     return similarities
+
+def newmodel(args, model, global_model):
+    if args.gpu:
+        torch.cuda.set_device(args.gpu)
+    device = 'cuda' if args.gpu else 'cpu'
+    #newmodel = copy.deepcopy(global_model)
+    model.to(device)
+    model.train()
+    #return model.state_dict()
