@@ -11,20 +11,22 @@ from tensorboardX import SummaryWriter
 from options import args_parser
 from update import LocalUpdate, test_inference
 from models import MLP, CNNMnist, CNNFashion_Mnist, CNNCifar
-from utils import get_dataset, average_weights, exp_details, models_similarity, flip_labels_clusters, newmodel,build_model_by_cluster
+from utils import get_dataset, average_weights, exp_details, models_similarity, flip_labels_clusters, newmodel,build_model_by_cluster,determine_preferred_model
+
 import matplotlib.pyplot as plt
 import scipy.cluster.hierarchy as hcl
 from scipy.spatial.distance import squareform
-tries = 7
+tries = 10
 modelname = 'clustering'
 resdir = 'diversity_exp/' + 'baseline_'+ modelname 
-#os.mkdir(resdir)
-test_time = 1
+os.mkdir(resdir)
+test_time = 10
 n_clusters_max = 4
-m = 6
+m = 10
+n = 3
 for i in range (tries):
 	expdir = resdir+'/exp'+str(i)
-	#os.mkdir(expdir)
+	os.mkdir(expdir)
 	start_time = time.time()
 
 	# define paths
@@ -130,7 +132,7 @@ for i in range (tries):
 			# plt.show()
 			models = [ copy.deepcopy(global_model) for j in range(n_clusters_max)]
 			weights = [ models[j].state_dict() for j in range(len(models))]
-			preferences = np.zeros(shape= (args.num_users, len(models)))
+			preferences = np.zeros(shape = (args.num_users, len(models)))
 			for j in range(max(clusters_found)):
 				print('model=====',j)
 				newmodel(args,models[j],global_model)
@@ -146,29 +148,61 @@ for i in range (tries):
 					#list_acc.append(acc)
 			print('======================PREFERENCES==================',preferences)            
 			#choose cluster  
-			
+			preferred = determine_preferred_model(preferences)
+			print(preferred)
+			idx_users_clusters = []
+			for j in range(max(clusters_found)):
+				idx_users_clusters.append(np.argwhere(preferred == j))
+			print(idx_users_clusters)
+			idxs_users_flat = [ x.flatten() for x in idx_users_clusters]
+			print(idxs_users)
+		else:
+			local_losses = []
+			for j in range(max(clusters_found)):
+				models[j].train()
+				idxs_users = np.random.choice(idxs_users_flat[j], min(n,1), replace=False) 
+				sizes = []
+				local_weights = []
+				for idx in idxs_users:
+					print('Data size of user', idx , ':', len(user_groups[idx]))
+					local_model = LocalUpdate(args=args, dataset=train_dataset,
+									  idxs=user_groups[idx], logger=logger)
+					w, loss = local_model.update_weights(
+							model=copy.deepcopy(models[j]), global_round=epoch)
+					sizes.append(len(user_groups[idx]))
+					local_weights.append(copy.deepcopy(w))
+					local_losses.append(copy.deepcopy(loss))            
+				global_weights = average_weights(local_weights,sizes)
+				models[j].load_state_dict(global_weights)
+
 		loss_avg = sum(local_losses) / len(local_losses)
 		train_loss.append(loss_avg)
-		# Calculate avg training accuracy over all users at every epoch
+	list_acc = []			
+	for j in range(max(clusters_found)):
+			models[j].eval()
+			for a in idxs_users_flat[j]:
+				local_model = LocalUpdate(args=args, dataset=train_dataset,
+	                                   idxs=user_groups[idx], logger=logger)
+	        	acc, _ = local_model.inference(model=models[j])
+	         	list_acc.append(acc)							
 
-
-
-	#     list_acc, list_loss = [], []
-	#     global_model.eval()
-	#     for c in range(args.num_users):
-	#         local_model = LocalUpdate(args=args, dataset=train_dataset,
-	#                                   idxs=user_groups[idx], logger=logger)
-	#         acc, loss = local_model.inference(model=global_model)
-	#         list_acc.append(acc)
-	#         list_loss.append(loss)
-	#     train_accuracy.append(sum(list_acc)/len(list_acc))
-	#     test_acc, test_loss = test_inference(args, global_model, test_dataset)
-	#     test_accuracyL.append(test_acc)
-	#     # print global training loss after every 'i' rounds
-	#     if (epoch+1) % print_every == 0:
-	#         print(f' \nAvg Training Stats after {epoch+1} global rounds:')
-	#         print(f'Training Loss : {np.mean(np.array(train_loss))}')
-	#         print('Train Accuracy: {:.2f}% \n'.format(100*train_accuracy[-1]))
+	# Calculate avg training accuracy over all users at every epoch
+	    # list_acc, list_loss = [], []
+	    # global_model.eval()
+	    # for c in range(args.num_users):
+	    #     local_model = LocalUpdate(args=args, dataset=train_dataset,
+	    #                               idxs=user_groups[idx], logger=logger)
+	    #     acc, loss = local_model.inference(model=global_model)
+	    #     list_acc.append(acc)
+	    #     list_loss.append(loss)
+	    # train_accuracy.append(sum(list_acc)/len(list_acc))
+	    # test_acc, test_loss = test_inference(args, global_model, test_dataset)
+	    # test_accuracyL.append(test_acc)
+	    # # print global training loss after every 'i' rounds
+	    # if (epoch+1) % print_every == 0:
+	    #     print(f' \nAvg Training Stats after {epoch+1} global rounds:')
+	    #     print(f'Training Loss : {np.mean(np.array(train_loss))}')
+	    #     print('Train Accuracy: {:.2f}% \n'.format(100*train_accuracy[-1]))
 
 	# # Test inference after completion of training
 	# test_acc, test_loss = test_inference(args, global_model, test_dataset)
@@ -189,26 +223,19 @@ for i in range (tries):
 
 
 
-
-
-
-
-
-
 # #    PLOTTING (optional)
-#     import matplotlib
-#     import matplotlib.pyplot as plt
-#     matplotlib.use('Agg')
+	import matplotlib
+	matplotlib.use('Agg')
 
-# #    Plot Loss curve
-#     plt.figure()
-#     plt.title('Training Loss vs Communication rounds')
-#     plt.plot(range(len(train_loss)), train_loss, color='r')
-#     plt.ylabel('Training loss')
-#     plt.xlabel('Communication Rounds')
-#     plt.savefig('../save/fed_{}_{}_{}_C[{}]_iid[{}]_E[{}]_B[{}]_loss.png'.
-#                 format(args.dataset, args.model, args.epochs, args.frac,
-#                        args.iid, args.local_ep, args.local_bs))
+#Plot Loss curve
+	plt.figure()
+	plt.title('Training Loss vs Communication rounds')
+	plt.plot(range(len(train_loss)), train_loss, color='r')
+	plt.ylabel('Training loss')
+	plt.xlabel('Communication Rounds')
+	plt.savefig('../save/fed_{}_{}_{}_C[{}]_iid[{}]_E[{}]_B[{}]_loss.png'.
+				format(args.dataset, args.model, args.epochs, args.frac,
+					   args.iid, args.local_ep, args.local_bs))
 	
 #     # Plot Average Accuracy vs Communication rounds
 #     plt.figure()

@@ -362,29 +362,13 @@ def build_model_by_cluster(w,s,clusters, cluster):
     s_temp = [s[i] for i in c]    
     return average_weights(w_temp,s_temp)
 
+
+
+def determine_preferred_model(preferences):
+    return np.argmax(preferences, axis=1)
+
 def aggregate_clusterwise(w,s,clusters, models):
     return        
-
-
-
-#'''
-def exp_details(args):
-    print('\nExperimental details:')
-    print(f'    Model     : {args.model}')
-    print(f'    Optimizer : {args.optimizer}')
-    print(f'    Learning  : {args.lr}')
-    print(f'    Global Rounds   : {args.epochs}\n')
-
-    print('    Federated parameters:')
-    if args.iid:
-        print('    IID')
-    else:
-        print('    Non-IID')
-    print(f'    Fraction of users  : {args.frac}')
-    print(f'    Local Batch size   : {args.local_bs}')
-    print(f'    Local Epochs       : {args.local_ep}\n')
-    return
-
 
 def flatten(source):
     return torch.cat([value.flatten() for value in source.values()])
@@ -418,3 +402,23 @@ def newmodel(args, model, global_model):
     model.to(device)
     model.train()
     #return model.state_dict()
+
+
+
+#'''
+def exp_details(args):
+    print('\nExperimental details:')
+    print(f'    Model     : {args.model}')
+    print(f'    Optimizer : {args.optimizer}')
+    print(f'    Learning  : {args.lr}')
+    print(f'    Global Rounds   : {args.epochs}\n')
+
+    print('    Federated parameters:')
+    if args.iid:
+        print('    IID')
+    else:
+        print('    Non-IID')
+    print(f'    Fraction of users  : {args.frac}')
+    print(f'    Local Batch size   : {args.local_bs}')
+    print(f'    Local Epochs       : {args.local_ep}\n')
+    return
