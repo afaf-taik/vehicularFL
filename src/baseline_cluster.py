@@ -18,18 +18,18 @@ from utils import get_dataset, average_weights, exp_details, models_similarity,\
 import matplotlib.pyplot as plt
 import scipy.cluster.hierarchy as hcl
 from scipy.spatial.distance import squareform
-tries = 1
+tries = 10
 modelname = 'clustering'
 resdir = 'diversity_exp/' + 'baseline_'+ modelname 
 dirname = resdir
-#os.mkdir(resdir)
-test_time = 4
+os.mkdir(resdir)
+test_time = 10
 n_clusters_max = 3
-m = 10
+m = 12
 n = 3
 for i in range (tries):
 	expdir = resdir+'/exp'+str(i)
-	#os.mkdir(expdir)
+	os.mkdir(expdir)
 	start_time = time.time()
 
 	# define paths
@@ -110,8 +110,15 @@ for i in range (tries):
 				local_losses.append(copy.deepcopy(loss))
 		
 			global_weights = average_weights(local_weights,sizes)
-			global_model.load_state_dict(global_weights)    
-		
+			global_model.load_state_dict(global_weights)
+			list_acc = []	    
+			for c in range(args.num_users):
+				local_model = LocalUpdate(args=args, dataset=train_dataset,
+									  idxs=user_groups[idx], logger=logger)
+				acc, loss = local_model.inference(model=global_model)
+				list_acc.append(acc)
+			#list_loss2.append(loss)
+			train_accuracy.append(sum(list_acc)/len(list_acc))		
 
 		elif(epoch==test_time):
 			global_model.train()
@@ -162,6 +169,16 @@ for i in range (tries):
 			print(idx_users_clusters)
 			idxs_users_flat = [ x.flatten() for x in idx_users_clusters]
 			print(idxs_users)
+			list_acc = []			
+			for j in range(max(clusters_found)):
+				models[j].eval()
+				for a in idxs_users_flat[j]:
+					local_model = LocalUpdate(args=args, dataset=train_dataset,
+									   idxs=user_groups[idx], logger=logger)
+					acc, _ = local_model.inference(model=models[j])
+					list_acc.append(acc)							
+				train_accuracy.append(sum(list_acc)/len(list_acc))			
+
 		else:
 			local_losses = []
 			idx_all = get_order(get_importance(E,S,A,args.epochs))
@@ -192,7 +209,7 @@ for i in range (tries):
 				A[U] +=1
 		loss_avg = sum(local_losses) / len(local_losses)
 		train_loss.append(loss_avg)
-		list_acc = []			
+	list_acc = []			
 	for j in range(max(clusters_found)):
 		models[j].eval()
 		for a in idxs_users_flat[j]:
@@ -211,7 +228,7 @@ for i in range (tries):
 									   idxs=user_groups[idx], logger=logger)
 				acc, _ = local_model.inference_test_local(model=models[j])
 				list_acc_test.append(acc)							
-			test_accuracyL.append(sum(list_acc_test)/len(list_acc_test))		         	
+			#test_accuracyL.append(sum(list_acc_test)/len(list_acc_test))		         	
 		#test_acc, test_loss = test_inference(args, global_model, test_dataset)
 
 	# Saving the objects train_loss and train_accuracy:
@@ -220,7 +237,7 @@ for i in range (tries):
 			   args.local_ep, args.local_bs)
 
 	with open(file_name, 'wb') as f:
-		pickle.dump([train_loss, train_accuracy, test_accuracyL], f)
+		pickle.dump([train_loss, train_accuracy, list_acc_test], f)
 
 	# print('\n Total Run Time: {0:0.4f}'.format(time.time()-start_time))
 	train_loss2, train_accuracy2,test_accuracyL2 = [], [], []
@@ -265,17 +282,17 @@ for i in range (tries):
 									   idxs=user_groups[idx], logger=logger)
 		acc, _ = local_model.inference_test_local(model=global_model2)
 		list_acc_test2.append(acc)							
-		test_accuracyL2.append(sum(list_acc_test2)/len(list_acc_test2))
+		#test_accuracyL2.append(sum(list_acc_test2)/len(list_acc_test2))
 	file_name = expdir+'/{}_{}_{}_C[{}]_iid[{}]_E[{}]_B[{}]_vanilla.pkl'.\
 		format(args.dataset, args.model, args.epochs, args.frac, args.iid,
 			   args.local_ep, args.local_bs)
 
 	with open(file_name, 'wb') as f:
-		pickle.dump([train_loss2, train_accuracy2, test_accuracyL2], f)
+		pickle.dump([train_loss2, train_accuracy2, list_acc_test2], f)
 
 	###########Plotting    
-
-
+	print('test accuracy for clustered', list_acc_test)
+	print('test accuracy for vanilla', list_acc_test2)
 	import matplotlib
 	import matplotlib.pyplot as plt
 	matplotlib.use('Agg')
@@ -288,6 +305,7 @@ for i in range (tries):
 
 	plt.ylabel('Training loss')
 	plt.xlabel('Communication Rounds')
+	plt.legend()
 	plt.savefig(dirname+'/fed_{}_{}_{}_C[{}]_iid[{}]_E[{}]_B[{}]_loss.png'.
 				 format(args.dataset, args.model, args.epochs, args.frac,
 						args.iid, args.local_ep, args.local_bs))
@@ -299,6 +317,7 @@ for i in range (tries):
 	plt.plot(range(len(train_accuracy2)), train_accuracy2, color='b', label ='vanilla FL')
 	plt.ylabel('Average Accuracy')
 	plt.xlabel('Communication Rounds')
+	plt.legend()
 	plt.savefig(dirname+'/fed_{}_{}_{}_C[{}]_iid[{}]_E[{}]_B[{}]_acc.png'.
 				 format(args.dataset, args.model, args.epochs, args.frac,
 						args.iid, args.local_ep, args.local_bs))
