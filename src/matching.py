@@ -2,11 +2,16 @@ import networkx as nx
 from pulp import *
 import matplotlib.pyplot as plt
 
+
 from_nodes = [1, 2, 3]
 to_nodes = [1, 2, 3, 4]
+#ucap = Nmax for all , u are the cluster-heads
 ucap = {1: 1, 2: 2, 3: 2} #u node capacities
+# vcap = 1 for all , v are the other vehicles
 vcap = {1: 1, 2: 1, 3: 1, 4: 1} #v node capacities
 
+#weights : R_{v,u} = acc of the model 
+#create function to populate dictionnary
 wts = {(1, 1): 0.5, (1, 3): 0.3,
        (2, 1): 0.4, (2, 4): 0.1,
        (3, 2): 0.7, (3, 4): 0.2}
@@ -25,9 +30,8 @@ def create_wt_doubledict(from_nodes, to_nodes):
         wt[u][v] = val
     return(wt)
 
-
+#A wrapper function that uses pulp to formulate and solve a WBM
 def solve_wbm(from_nodes, to_nodes, wt):
-''' A wrapper function that uses pulp to formulate and solve a WBM'''
 
     prob = LpProblem("WBM Problem", LpMaximize)
 
@@ -80,3 +84,35 @@ def get_selected_edges(prob):
 wt = create_wt_doubledict(from_nodes, to_nodes)
 p = solve_wbm(from_nodes, to_nodes, wt)
 print_solution(p)    
+
+selected_edges = get_selected_edges(p)
+
+
+#Create a Networkx graph. Use colors from the WBM solution above (selected_edges)
+graph = nx.Graph()
+colors = []
+for u in from_nodes:
+    for v in to_nodes:
+        edgecolor = 'blue' if (str(u), str(v)) in selected_edges else 'gray'
+        if wt[u][v] > 0:
+            graph.add_edge('u_'+ str(u), 'v_' + str(v))
+            colors.append(edgecolor)
+
+
+def get_bipartite_positions(graph):
+    pos = {}
+    for i, n in enumerate(graph.nodes()):
+        x = 0 if 'u' in n else 1 #u:0, v:1
+        pos[n] = (x,i)
+    return(pos)
+
+pos = get_bipartite_positions(graph)
+
+
+nx.draw_networkx(graph, pos, with_labels=True, edge_color=colors,
+       font_size=20, alpha=0.5, width=3)
+
+plt.axis('off')
+plt.show() 
+
+print("done")

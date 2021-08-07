@@ -321,6 +321,11 @@ def get_importance(entropy,size,age,rnd,roE=1/3,roD=1/3,roA =1/3):
     return importance
 
 
+def get_order(importance):
+    e=[]
+    for i in range(len(importance)):
+        e.append(-1*importance[i])
+    return np.argsort(e)
 def get_age(age):
     a = []
     for i in range(len(age)):
