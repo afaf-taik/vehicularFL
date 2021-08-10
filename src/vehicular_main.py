@@ -24,7 +24,7 @@ tries = 5
 modelname = 'mlp'
 resdir = 'diversity_exp/' + 'clustering_'+ modelname 
 dirname = resdir
-os.mkdir(resdir)
+#os.mkdir(resdir)
 test_time = 25
 n_clusters_max = 2
 m = 6
@@ -359,15 +359,15 @@ import pickle
 path = resdir
 lossname = path+'/loss_avg.png'
 accname = path+'/acc_avg.png'
-modelname = 'mlp'
+modelname = 'cnn'
 list_subfolders_with_paths = [f.path for f in os.scandir(path) if f.is_dir()]
 
 def load(t,r,path):
 	dirname = path+'/exp'+str(t)
 	if(r==0):
-		filename = dirname +'/mnist_'+modelname+'_50_C[0.2]_iid[0]_E[1]_B[20]_vanilla.pkl'
+		filename = dirname +'/mnist_'+modelname+'_25_C[0.2]_iid[0]_E[1]_B[10]_vanilla.pkl'
 	else:
-		filename = dirname +'/mnist_'+modelname+'_50_C[0.2]_iid[0]_E[1]_B[20]_proposed.pkl'
+		filename = dirname +'/mnist_'+modelname+'_25_C[0.2]_iid[0]_E[1]_B[10]_proposed.pkl'
 	with open(filename,'rb') as f :
 		x = pickle.load(f)
 	return x
