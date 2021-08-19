@@ -21,14 +21,16 @@ from scipy.spatial.distance import squareform
 import matplotlib
 
 tries = 5
+fraction = 0.6
 modelname = 'mlp'
-resdir = 'diversity_exp/' + 'clustering_'+ modelname 
+resdir = 'diversity_exp/' + 'clustering_noshift_'+ modelname +'_fraction'+str(fraction)
 dirname = resdir
 os.mkdir(resdir)
 test_time = 25
 n_clusters_max = 2
 m = 6
 n = 4
+m3 = 9
 fileinfo = resdir+'/exp_info.txt'
 info = 'testime'+str(test_time)+'\nm',str(m)+'\n maxcluster'+str(n_clusters_max)+'\n model'+modelname
 with open(fileinfo,'w+') as f:
@@ -44,14 +46,14 @@ for i in range (tries):
 
 	args = args_parser()
 	exp_details(args)
-	m2 = int(args.num_users*0.6)
+	m2 = int(args.num_users*fraction)
 	if args.gpu:
 		torch.cuda.set_device(args.gpu)
 	device = 'cuda' if args.gpu else 'cpu'
 
 	# load dataset and user groups
-	train_dataset1, test_dataset1, user_groups = get_dataset(args)
-	train_dataset, test_dataset, clusters = flip_labels_clusters(args,user_groups,train_dataset1,test_dataset1)
+	train_dataset, test_dataset, user_groups = get_dataset(args)
+	#train_dataset, test_dataset, clusters = flip_labels_clusters(args,user_groups,train_dataset1,test_dataset1)
 	# BUILD MODEL
 	if args.model == 'cnn':
 		# Convolutional neural netork
@@ -100,7 +102,7 @@ for i in range (tries):
 		local_weights2, local_losses2 = [], []		
 		print(f'\n | Global Training Round : {epoch+1} |\n')
 		ordered = get_order(get_importance(E,S,A,args.epochs))
-		idxs_users = ordered[:m]
+		idxs_users = ordered[:m3]
 		#m = max(int(args.frac * args.num_users), 1)    
 		if (epoch<test_time):
 			global_model.train()
@@ -126,7 +128,7 @@ for i in range (tries):
 					A[c] +=1
 				local_model = LocalUpdate(args=args, dataset=train_dataset,
 									  idxs=user_groups[idx], logger=logger)
-				acc, loss = local_model.inference(model=global_model)
+				acc, _ = local_model.inference(model=global_model)
 				list_acc.append(acc)
 			#list_loss2.append(loss)
 			train_accuracy.append(sum(list_acc)/len(list_acc))		
@@ -196,7 +198,7 @@ for i in range (tries):
 									   idxs=user_groups[idx], logger=logger)
 					acc, _ = local_model.inference(model=models[j])
 					list_acc.append(acc)							
-				train_accuracy.append(sum(list_acc)/len(list_acc))			
+			train_accuracy.append(sum(list_acc)/len(list_acc))			
 		else:
 
 			idx_all = get_order(get_importance(E,S,A,args.epochs))
@@ -225,17 +227,18 @@ for i in range (tries):
 					local_losses.append(copy.deepcopy(loss))            
 				
 				global_weights = average_weights(local_weights,sizes)
-				loss_avg = sum(local_losses) / len(local_losses)
-				new_loss[j].append(loss_avg)
+				#new_loss[j].append(loss_avg)
 				models[j].load_state_dict(global_weights)
 				for U in range(args.num_users):
 					if(U in idxs_users):
 						A[U] = 0
 					else:
 						A[U] +=1
-				train_loss_clusters.append(sum(new_loss[j])/len(new_loss[j]))
-			cluster_losses.append(train_loss_clusters)
-			loss_avg = sum(train_loss_clusters) / len(train_loss_clusters)	
+			loss_avg = sum(local_losses) / len(local_losses)
+		
+			#train_loss_clusters.append(sum(new_loss[j])/len(new_loss[j]))
+			#cluster_losses.append(train_loss_clusters)
+			#loss_avg = sum(train_loss_clusters) / len(train_loss_clusters)	
 			train_loss.append(loss_avg)
 			list_acc = []			
 			for j in range(max(clusters_found)):
@@ -245,7 +248,7 @@ for i in range (tries):
 									   idxs=user_groups[idx], logger=logger)
 					acc, _ = local_model.inference(model=models[j])
 					list_acc.append(acc)							
-				train_accuracy.append(sum(list_acc)/len(list_acc))
+			train_accuracy.append(sum(list_acc)/len(list_acc))
 	
 #test all 
 	list_acc_test = []
@@ -265,7 +268,7 @@ for i in range (tries):
 			   args.local_ep, args.local_bs)
 
 	with open(file_name, 'wb') as f:
-		pickle.dump([train_loss, train_accuracy, list_acc_test,train_loss_clusters], f)
+		pickle.dump([train_loss, train_accuracy, list_acc_test], f)
 
 	# print('\n Total Run Time: {0:0.4f}'.format(time.time()-start_time))
 	train_loss2, train_accuracy2,test_accuracyL2 = [], [], []
@@ -404,7 +407,7 @@ matplotlib.use('Agg')
 
 	# Plot Loss curve
 plt.figure()
-plt.title('Training Loss vs Communication rounds')
+#plt.title('Training Loss vs Communication rounds')
 plt.plot(range(len(moy_rnd_loss)), moy_rnd_loss, 'b+',  linewidth=1, linestyle='-', label='random')
 plt.plot(range(len(moy_opt_loss)), moy_opt_loss,  'ro',  linewidth=1, linestyle='-',label = 'proposed')
 # plt.plot(range(len(moy_rnd_loss)), min_rnd_loss, 'b+',  linewidth=1, linestyle='--', label='min age-based scheduling')
@@ -419,10 +422,10 @@ plt.savefig(lossname)
 
 
 plt.figure()
-plt.title('Accuracy vs Communication rounds')
-plt.ylim(ymin=0.2)
-plt.plot(range(int(len(moy_rnd_acc))), moy_rnd_acc, 'b+',  linewidth=1, linestyle='-', label='random')
-plt.plot(range(int(len(moy_opt_acc))), moy_opt_acc, 'ro',  linewidth=1, linestyle='-', label = 'proposed')
+#plt.title('Accuracy vs Communication rounds')
+plt.ylim(ymin=0.3,ymax=0.8)
+plt.plot(range(int(len(moy_rnd_acc[:31]))), moy_rnd_acc[:31], 'b+',  linewidth=1, linestyle='-', label='Vanilla FL')
+plt.plot(range(int(len(moy_opt_acc[:31]))), moy_opt_acc[:31], 'ro',  linewidth=1, linestyle='-', label = 'proposed')
 plt.grid()
 plt.ylabel('Train Accuracy')
 plt.xlabel('Communication Rounds')

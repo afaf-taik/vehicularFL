@@ -24,7 +24,7 @@ if __name__ == '__main__':
 
     # load datasets
     train_dataset, test_dataset, _ = get_dataset(args)
-
+    args.model = 'mlp'
     # BUILD MODEL
     if args.model == 'cnn':
         # Convolutional neural netork
@@ -59,17 +59,18 @@ if __name__ == '__main__':
         optimizer = torch.optim.Adam(global_model.parameters(), lr=args.lr,
                                      weight_decay=1e-4)
 
-    trainloader = DataLoader(train_dataset, batch_size=64, shuffle=True)
+    trainloader = DataLoader(train_dataset, batch_size=20, shuffle=True)
     criterion = torch.nn.NLLLoss().to(device)
     epoch_loss = []
     times = []
     args.epochs = 1
+    times = []
     for epoch in tqdm(range(args.epochs)):
         batch_loss = []
-
+        
         for batch_idx, (images, labels) in enumerate(trainloader):
+            t = time.time()    
             
-            t = time.time()
             images, labels = images.to(device), labels.to(device)
 
             optimizer.zero_grad()
@@ -77,28 +78,31 @@ if __name__ == '__main__':
             loss = criterion(outputs, labels)
             loss.backward()
             optimizer.step()
-            times.append(time.time() - t)
             
-            if batch_idx % 50 == 0:
-                print('Train Epoch: {} [{}/{} ({:.0f}%)]\tLoss: {:.6f}'.format(
-                    epoch+1, batch_idx * len(images), len(trainloader.dataset),
-                    100. * batch_idx / len(trainloader), loss.item()))
+            
+            # if batch_idx % 100 == 0:
+            #     print('Train Epoch: {} [{}/{} ({:.0f}%)]\tLoss: {:.6f}'.format(
+            #         epoch+1, batch_idx * len(images), len(trainloader.dataset),
+            #         100. * batch_idx / len(trainloader), loss.item()))
             batch_loss.append(loss.item())
-
+            times.append(1000*(time.time()-t))
         loss_avg = sum(batch_loss)/len(batch_loss)
         print('\nTrain loss:', loss_avg)
         epoch_loss.append(loss_avg)
-
+        
+    
+    print(times)
+    print('avg train time', sum(times)/len(times))
     # Plot loss
-    plt.figure()
-    plt.plot(range(len(epoch_loss)), epoch_loss)
-    plt.xlabel('epochs')
-    plt.ylabel('Train loss')
-    plt.savefig('save/nn_{}_{}_{}.png'.format(args.dataset, args.model,
-                                                 args.epochs))
-    torch.save(global_model.state_dict(), 'model_mlp_size_test.pkl')
-    # testing
-    test_acc, test_loss = test_inference(args, global_model, test_dataset)
-    print('Test on', len(test_dataset), 'samples')
-    print("Test Accuracy: {:.2f}%".format(100*test_acc))
-    print('average batch training time: ', sum(times)/len(times))
+    # plt.figure()
+    # plt.plot(range(len(epoch_loss)), epoch_loss)
+    # plt.xlabel('epochs')
+    # plt.ylabel('Train loss')
+    # plt.savefig('save/nn_{}_{}_{}.png'.format(args.dataset, args.model,
+    #                                              args.epochs))
+    # torch.save(global_model.state_dict(), 'model_mlp_size_test.pkl')
+    # # testing
+    # test_acc, test_loss = test_inference(args, global_model, test_dataset)
+    # print('Test on', len(test_dataset), 'samples')
+    # print("Test Accuracy: {:.2f}%".format(100*test_acc))
+    # print('average batch training time: ', sum(times)/len(times))
