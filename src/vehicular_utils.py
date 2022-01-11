@@ -51,9 +51,10 @@ def update_location(t, x, speeds):
 #T_k ia rate of stay 
 def required_rate(Ttrain, T_k, S):
 	rates = []
+	Tdeadline = 3
 	for i in range(len(Ttrain)):
-		if (T_k[i]>Ttrain[i]):
-			rates.append(S/( T_k[i] - Ttrain[i]))
+		if (T_k[i]>Ttrain[i] + Tdeadline):
+			rates.append(S/( T_k[i] - Ttrain[i]-Tdeadline))
 		else:
 			rates.append(math.inf)
 	return rates
@@ -71,20 +72,20 @@ def dataRateRB(args, Gains,Total_RBs):
 			drRB[eu][rb] = BW * math.log2(1 +np.divide(Power * Gains[eu][args.num_users][rb],sig2_watts))	
 	return drRB
 
-def dataRateRB_V2V(args, Gains,cluster_head, Total_RBs):
-	drRB = np.zeros((args.num_users,Total_RBs))
+def dataRateRB_V2V(args, Gains, Total_RBs):
+	drRB = np.zeros((args.num_users,args.num_users,Total_RBs))
 	Gains = Gains.squeeze()
 	#print("Shape of gains plzzzzzzzzzzzzzzz",Gains.shape)
 	for rb in range(Total_RBs):
 		#print('calculating for rb', rb)		
-		for eu in range(args.num_users):
+		for i in range(args.num_users):
+			for j in range(args.num_users):
+			
 			#print('calculating for user', eu)
 			#print('this is the list of gains', Gains[eu][args.num_users][rb])
-			drRB[eu][rb] = BW * math.log2(1 +np.divide(Power * Gains[eu][cluster_head][rb],sig2_watts))	
+				drRB[i][j][rb] = BW * math.log2(1 + np.divide(Power * Gains[i][j][rb],sig2_watts))	
 	return drRB
 
-def upload_time_uniform_V2V():
-	return
 
 def cost_in_RBs(r_min, args, gains,Total_RBs):
 	nbr_RBs = np.ones(args.num_users)
@@ -138,43 +139,39 @@ def allocate(div_indicator,cost,dataRatesRBs,r_min,Total_RBs):
 	#return datarates, indexes of scheduled devices		
 	return scheduled, datarates_schedule
 
-####################To be adjusted
-# def allocate_random(cost,dataRatesRBs,r_min,Total_RBs):
-# 	priority = [ for i in range(len(div_indicator))]
-# 	ordered = utils.get_order(priority)
-# 	b = Total_RBs 
-# 	k = 0
-# 	scheduled = []
-# 	RB_allocation = np.zeros(Total_RBs)
-# 	datarates_schedule = []
-# 	while(b>0):
-# 		scheduled.append(ordered[k])
-# 		datarates = dataRatesRBs[ordered[k]][:]
-# 		r = 0
-# 		print('required RBs for', k)
-# 		while(r<r_min[ordered[k]] and b>0):
-# 			r_ = max(datarates)
-# 			#get index of r_ in dataRatesRBs
-# 			#add condition of it being removed
-# 			#datarates = np.delete(datarates, np.argwhere(datarates == r_))	
-# 			if (RB_allocation[np.argwhere(datarates == r_)[0]]==0):
-# 				r += r_
-# 				b = b - 1
-# 				RB_allocation[np.argwhere(datarates == r_)[0]] = 1	
-			
-# 			datarates = np.delete(datarates, np.argwhere(datarates == r_))				
-# 		datarates_schedule.append(r)
-# 		k = k+1
-# 	#return datarates, indexes of scheduled devices		
-# 	return scheduled, datarates_schedule	
-
-
+def upload_time_uniform_V2V(args,a,NotSelected,drRB,maxRB,Tdeadline,Ttrain):
+	t_up_required = np.zeros((args.num_users,args.num_users))
+	t_up = np.zeros((args.num_users,args.num_users))
+	for i in a:
+		for j in NotSelected:
+			t_up_required[i][j] = Tdeadline[i]-Ttrain[j]
+			drbs_ = drRB[i][j][:].sort()
+			t_up[i][j] = S/np.sum(drRB[i][j][:maxRB])
+	return t_up_required, t_up
 
 #######################################################################################
 #######################################################################################
 ###################################Problem 2 functions#################################
 #######################################################################################
 #######################################################################################
+
+def LocalDeadline(x, Ttrain,Twait):
+	return Ttrain[x] + Twait
+
+def canUploadV2V(args,cluster_heads,NotSelected, Gains,Ttrain, Twait, LLT, Total_RBs, Nmax):
+	wts_time = {}  
+	maxRB =  int(Total_RBs/Nmax)
+	drRB = dataRateRB_V2V(args, Gains, Total_RBs)
+	Tdeadline = np.zeros(args.num_users)
+	print(Ttrain)
+	for x in cluster_heads:
+		print('calculating deadline for',x)
+		Tdeadline[x] = Ttrain[x] + Twait
+	t_req, t_up =  upload_time_uniform_V2V(args,cluster_heads,NotSelected,drRB,maxRB,Tdeadline,Ttrain)
+	for i in cluster_heads:
+		for j in NotSelected:
+			wts_time[(i,j)] = int(t_req[i][j]>t_up[i][j] and LLT[i][j]>t_req[i][j])
+	return wts_time
 
 def capacities(Selected, NotSelected, Nmax):
 	dict_heads = {}
@@ -185,17 +182,18 @@ def capacities(Selected, NotSelected, Nmax):
 		dict_followers[j] = 1 
 	return dict_heads, dict_followers
 
-def create_wts_dict(Selected, NotSelected, Preferences, LLT, mobility_only = True):
+def create_wts_dict(Selected, NotSelected, Preferences, wts_time, mobility_only = True):
 	wts = {}
 	for i in Selected:
 		if(mobility_only):
-			mult = 1
+			for j in NotSelected:
+				wts[(i,j)] = wts_time[(i,j)]
 		else:	
 			idx_model = np.argmax(Preferences[i,:])[0]
-			mult = Preferences[j][idx_model]/3000
+			mult = Preferences[j][idx_model]
 			print(idx_model)
-		for j in NotSelected:
-			wts[(i,j)] = mult*LLT[i][j]
+			for j in NotSelected:
+				wts[(i,j)] = mult*wts_time[(i,j)]
 	return wts
 
 def create_wt_doubledict(Selected, NotSelected,wts):
@@ -259,6 +257,35 @@ def get_selected_edges(prob):
 	for su, sv in list(zip(selected_from, selected_to)):
 		selected_edges.append((su, sv))
 	return(selected_edges)          
+####################To be adjusted
+# def allocate_random(cost,dataRatesRBs,r_min,Total_RBs):
+# 	priority = [ for i in range(len(div_indicator))]
+# 	ordered = utils.get_order(priority)
+# 	b = Total_RBs 
+# 	k = 0
+# 	scheduled = []
+# 	RB_allocation = np.zeros(Total_RBs)
+# 	datarates_schedule = []
+# 	while(b>0):
+# 		scheduled.append(ordered[k])
+# 		datarates = dataRatesRBs[ordered[k]][:]
+# 		r = 0
+# 		print('required RBs for', k)
+# 		while(r<r_min[ordered[k]] and b>0):
+# 			r_ = max(datarates)
+# 			#get index of r_ in dataRatesRBs
+# 			#add condition of it being removed
+# 			#datarates = np.delete(datarates, np.argwhere(datarates == r_))	
+# 			if (RB_allocation[np.argwhere(datarates == r_)[0]]==0):
+# 				r += r_
+# 				b = b - 1
+# 				RB_allocation[np.argwhere(datarates == r_)[0]] = 1	
+			
+# 			datarates = np.delete(datarates, np.argwhere(datarates == r_))				
+# 		datarates_schedule.append(r)
+# 		k = k+1
+# 	#return datarates, indexes of scheduled devices		
+# 	return scheduled, datarates_schedule	
 
 
 
@@ -266,7 +293,8 @@ if __name__ == '__main__':
 	args = args_parser()	
 	args.num_users = 30
 	NCHANNELS = 4
-	S = 100000
+	S = 160000
+	Nmax = 2
 	Ttrain, train_dataset, test_dataset, user_groups = initialize(args)
 	#print(Ttrain)	
 	from VehicularEnv import Freeway,V2IChannels,V2VChannels, Vehicle
@@ -285,14 +313,20 @@ if __name__ == '__main__':
 	entropy = utils.get_gini(user_groups,train_dataset)
 	div_indicator = utils.get_importance(entropy,size,age,50,roE=1/3,roD=1/3,roA =1/3)
 	a,b = allocate(div_indicator, cost, rb, r_min,NCHANNELS)
-	print(a)
-	print(b)
+	print('printing whatever a is ', a)
+	print('printing whatever b is ',b)
 	NotSelected = [i for i in range(args.num_users)]
 	for x in a:
 		NotSelected.remove(x)
+
 	dict_heads, dict_followers = capacities(a, NotSelected, 2)
 	print(dict_heads, dict_followers)
-	wts = create_wts_dict(a, NotSelected, Preferences, LLT_)
+
+	Twait = 2
+
+	wts_time = canUploadV2V(args,a,NotSelected,  env1.channelgains, Ttrain, Twait, LLT_, NCHANNELS, Nmax)
+
+	wts = create_wts_dict(a, NotSelected, Preferences, wts_time)
 	print(wts)
 
 	wt = create_wt_doubledict(a, NotSelected,wts)

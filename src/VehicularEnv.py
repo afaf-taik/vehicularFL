@@ -328,7 +328,8 @@ class Freeway(V2VChannels, Vehicle):
 if __name__=='__main__':
     env = Freeway(num_vehicles = 3, num_slots = 1, num_channels = 2)
     env.build_environment()
-    #print(env.channelgains)
+    print("channel gains")
+    print(env.channelgains)
     print('velocities',env.velocity)
     LLT_ = env.LLT()
     print(LLT_)
