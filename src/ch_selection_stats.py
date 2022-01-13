@@ -16,12 +16,13 @@ from vehicular_utils import dataRateRB, required_rate, cost_in_RBs ,allocate, ca
 from VehicularEnv import Freeway,V2IChannels,V2VChannels, Vehicle
 from pulp import *
 #Size of the model
-modelsizes = [160000, 240000, 320000] 
+modelsizes = [160000, 320000, 640000, 960000] 
 numberRBs = [2,4,6,8,12,16,20]
 Power = 0.1
-tries = 50
+tries = 20
 Pmax = 1 #Watt #5 Watt is a high. You can use 1 Watt as the max.
-Ttrain_batch = [0.005,0.0075, 0.01]  #seconds , time to train on a batch of SGD 
+#Ttrain_batch = [0.005,0.0075, 0.01]  #seconds , time to train on a batch of SGD 
+Ttrain_batch = [0.005, 0.01, 0.02, 0.03]  #seconds , time to train on a batch of SGD 
 num_lanes = 6  
 #We can also suppose that the width is negligible 
 numEpochs = 1  
@@ -32,16 +33,14 @@ BW = 180000   # Bandwidth of a RB Hz
 sig2_dBm = -114 # additive white Gaussian noise (dB)
 sig2_watts = 10 ** ((sig2_dBm-30)/10) # additive white Gaussian noise (watts)
 NCHANNELS = numberRBs[2]
-experiment_name = 'number_ch_elected_modelSize/'+str(NCHANNELS)+'RBs'
+experiment_name = 'number_ch_elected_modelSize_clustering/'+str(NCHANNELS)+'RBs'
 path = 'diversity_exp/'+experiment_name
-#os.mkdir(path)
+os.mkdir(path)
 Nmax = 2
-
-tries = 1
+#tries = 1
 for t in range(tries):
 	file_name = path + '/exp'+str(t)+'.pkl'
 	#os.mkdir(dirname)
-
 
 	path_project = os.path.abspath('..')
 	logger = SummaryWriter('logs')
@@ -66,6 +65,7 @@ for t in range(tries):
 	#print(env.channelgains)
 	save_all_ch = [ [] for x in modelsizes]
 	save_ch_sizes = [ [] for x in modelsizes ]
+	save_c_sizes = [ [] for x in modelsizes ]	
 	for epoch in tqdm(range(args.epochs)):
 		env = Freeway(num_vehicles = args.num_users, num_slots = 1, num_channels = NCHANNELS)
 		env.build_environment()
@@ -76,8 +76,7 @@ for t in range(tries):
 			div_indicator = get_importance(E,S,A1[x],args.epochs)			
 			r_min = required_rate(Ttrain[x], Tk, modelsizes[x])
 			cost, rb = cost_in_RBs(r_min, args, env.channelgains, NCHANNELS)
-			print(cost)
-			
+			print(cost)			
 			size = [len(user_groups[i]) for i in range(args.num_users)]
 			a,b = allocate(div_indicator, cost, rb, r_min,NCHANNELS)
 			print(a)
@@ -103,35 +102,16 @@ for t in range(tries):
 				_,s = alpha
 				all_participants.append(int(s))
 			print(all_participants)
+			save_c_sizes[x].append(len(all_participants))
 			for U in range(args.num_users):
 				if(U in a):
 					A1[x][U] = 0
 				else:
 					A1[x][U] +=1
 
-	# with open(file_name, 'wb') as f:
-	# 	pickle.dump([save_ch_sizes,save_all_ch], f)
 
 
-	########################pickle dump ###############################				
 
 
-		# NotSelected = [i for i in range(args.num_users)]
-		# for x in a:
-		# 	NotSelected.remove(x)
-		# dict_heads, dict_followers = capacities(a, NotSelected, Nmax)
-		# print(dict_heads, dict_followers)
-		# wts = create_wts_dict(a, NotSelected, Preferences, LLT_)
-		# print(wts)
-
-		# wt = create_wt_doubledict(a, NotSelected,wts)
-		# p = solve_wbm(a, NotSelected, wt, dict_heads , dict_followers)
-		# print_solution(p)    
-		# selected_edges = get_selected_edges(p)
-		# print(selected_edges)
-		# all_participants = a
-		# for x in selected_edges:
-		# 	_,s = x
-		# 	all_participants.append(int(s))
-
-
+	with open(file_name, 'wb') as f:
+		pickle.dump([save_ch_sizes,save_all_ch,save_c_sizes], f)

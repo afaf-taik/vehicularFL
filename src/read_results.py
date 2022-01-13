@@ -8,7 +8,7 @@ fraction = 1.0
 modelname = 'mlp'
 
 experiment_name = 'mobility_normalnoniid'
-resdir = 'diversity_exp/mobility/'+experiment_name
+resdir = 'diversity_exp/mobility/mobility_normalnoniid_new'
 dirname = resdir
 #os.mkdir(resdir)
 # test_time = 25
@@ -46,11 +46,11 @@ for t in range(len(list_subfolders_with_paths)):
 	x  = load(t,0,path)
 	sloss_rnd.append(x[0])
 	sacc_rnd.append(x[1])
-	stestrnd.append(x[3])
+	#stestrnd.append(x[3])
 	y = load(t,1,path)
 	sloss_opt.append(y[0])
 	sacc_opt.append(y[1])
-	stestopt.append(y[3])
+	#stestopt.append(y[3])
 
 moy_rnd_loss = np.array(sloss_rnd).mean(0)
 #max_rnd_loss = np.array(sloss_rnd).max(0)
@@ -62,13 +62,16 @@ moy_opt_loss = np.array(sloss_opt).mean(0)
 # min_opt_loss = np.array(sloss_opt).min(0)
 moy_opt_acc = np.array(sacc_opt).mean(0)
 
-min_rnd_acc = np.array(sacc_rnd).min(0)
-min_opt_acc = np.array(stestopt).min(0)
+# min_rnd_acc = np.array(sacc_rnd).min(0)
+# min_opt_acc = np.array(stestopt).min(0)
 
-max_rnd_acc = np.array(sacc_rnd).max(0)
-max_opt_acc = np.array(stestopt).max(0)
+# max_rnd_acc = np.array(sacc_rnd).max(0)
+# max_opt_acc = np.array(stestopt).max(0)
+moy_rnd_acc1 = np.array(sacc_rnd[:][50]).mean()
+moy_opt_acc1 = np.array(sacc_opt[:][50]).mean()
 
-
+moy_rnd_acc1 = np.array(sacc_rnd[:][50]).mean()
+moy_opt_acc1 = np.array(sacc_opt[:][50]).mean()
 # print(moy_rnd_acc2)
 # print(moy_opt_acc2)
 # import matplotlib.pyplot as plt
@@ -79,19 +82,19 @@ max_opt_acc = np.array(stestopt).max(0)
 
 plt.figure()
 #plt.title('Accuracy vs Communication rounds')
-plt.ylim(ymin=0.3,ymax=0.95)
+plt.ylim(ymin=0.4,ymax=0.9)
 
 plt.plot(range(int(len(moy_rnd_acc[:50]))), moy_rnd_acc[:50], 'b+',  linewidth=1, linestyle='-', label='Vanilla FL')
 
 plt.plot(range(int(len(moy_opt_acc[:50]))), moy_opt_acc[:50], 'ro',  linewidth=1, linestyle='-', label = 'CVFL')
 # plt.plot(range(int(len(moy_opt_acc[:50]))), min_opt_acc[:50], 'r',  linewidth=1, linestyle='-')
 # plt.plot(range(int(len(moy_opt_acc[:50]))), max_opt_acc[:50], 'r',  linewidth=1, linestyle='-')
-plt.fill_between(range(50),moy_opt_acc[:50], min_opt_acc[:50], max_opt_acc[:50], edgecolor='r', facecolor='r', alpha=0.2)
+# plt.fill_between(range(50),moy_opt_acc[:50], min_opt_acc[:50], max_opt_acc[:50], edgecolor='r', facecolor='r', alpha=0.2)
 
-plt.fill_between(range(int(len(moy_opt_acc[:50]))),moy_rnd_acc[:50], min_rnd_acc[:50], max_rnd_acc[:50], edgecolor='b', facecolor='b', alpha=0.2)
+# plt.fill_between(range(int(len(moy_opt_acc[:50]))),moy_rnd_acc[:50], min_rnd_acc[:50], max_rnd_acc[:50], edgecolor='b', facecolor='b', alpha=0.2)
 plt.grid()
 
-plt.ylabel('Train Accuracy')
+plt.ylabel('Accuracy')
 plt.xlabel('Communication Rounds')
 plt.legend()
 plt.show()

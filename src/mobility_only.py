@@ -12,13 +12,13 @@ from options import args_parser
 from update import LocalUpdate, test_inference
 from models import MLP, CNNMnist, CNNFashion_Mnist, CNNCifar
 from utils import get_dataset, average_weights, exp_details, get_gini, get_order, get_entropy, get_importance
-from vehicular_utils import dataRateRB, required_rate, cost_in_RBs ,allocate, capacities, create_wts_dict, create_wt_doubledict, solve_wbm,print_solution,get_selected_edges
+from vehicular_utils import dataRateRB, required_rate, cost_in_RBs ,allocate, capacities, create_wts_dict, create_wt_doubledict, solve_wbm,print_solution,get_selected_edges, canUploadV2V
 from VehicularEnv import Freeway,V2IChannels,V2VChannels, Vehicle
 from pulp import *
 #Size of the model
 modelsize = 160000
 Power = 0.1
-tries = 5
+tries = 50
 Pmax = 1 #Watt #5 Watt is a high. You can use 1 Watt as the max.
 Ttrain_batch = 0.005 #seconds , time to train on a batch of SGD 
 num_lanes = 6  
@@ -31,9 +31,9 @@ BW = 180000   # Bandwidth of a RB Hz
 sig2_dBm = -114 # additive white Gaussian noise (dB)
 sig2_watts = 10 ** ((sig2_dBm-30)/10) # additive white Gaussian noise (watts)
 NCHANNELS = 4
-experiment_name = 'mobility_normalnoniid'
+experiment_name = 'mobility_normalnoniid_new'
 path = 'diversity_exp/mobility/'+experiment_name
-#os.mkdir(path)
+os.mkdir(path)
 Nmax = 2
 for t in range(tries):
 	dirname = path + '/exp'+str(t)
@@ -133,7 +133,7 @@ for t in range(tries):
 		div_indicator = get_importance(E,S,A1,args.epochs)
 		LLT_ = env.LLT()
 		print(LLT_)
-		Preferences = np.ones((args.num_users,n_clusters_max))
+		Preferences = np.ones((args.num_users,1))
 ############################Allocate test##########################			
 		Tk = env.rate_stay()
 		r_min = required_rate(Ttrain, Tk, modelsize)
@@ -150,9 +150,9 @@ for t in range(tries):
 			NotSelected.remove(x)
 		dict_heads, dict_followers = capacities(a, NotSelected, Nmax)
 		print(dict_heads, dict_followers)
-		wts = create_wts_dict(a, NotSelected, Preferences, LLT_)
-		print(wts)
-
+		Twait = 2
+		wts_time = canUploadV2V(args,a,NotSelected, env.channelgains, Ttrain, Twait, LLT_, NCHANNELS, Nmax)
+		wts = create_wts_dict(a, NotSelected, Preferences, wts_time)
 		wt = create_wt_doubledict(a, NotSelected,wts)
 		p = solve_wbm(a, NotSelected, wt, dict_heads , dict_followers)
 		print_solution(p)    

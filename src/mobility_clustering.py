@@ -14,7 +14,7 @@ from models import MLP, CNNMnist, CNNFashion_Mnist, CNNCifar
 from utils import get_dataset, average_weights, exp_details, models_similarity,\
 				 flip_labels_clusters, newmodel,build_model_by_cluster,determine_preferred_model,\
 				 get_gini, get_order, get_entropy , get_importance
-from vehicular_utils import dataRateRB, required_rate, cost_in_RBs ,allocate, capacities, create_wts_dict, create_wt_doubledict, solve_wbm,print_solution,get_selected_edges
+from vehicular_utils import dataRateRB, required_rate, cost_in_RBs ,allocate, capacities, create_wts_dict, create_wt_doubledict, solve_wbm,print_solution,get_selected_edges, canUploadV2V
 from VehicularEnv import Freeway,V2IChannels,V2VChannels, Vehicle
 from pulp import *
 import matplotlib.pyplot as plt
@@ -22,19 +22,20 @@ import scipy.cluster.hierarchy as hcl
 from scipy.spatial.distance import squareform
 import matplotlib
 
-tries = 10
+
 fraction = 0.6
 modelname = 'mlp'
-resdir = 'diversity_exp/mobility/clustering_shift_'+ modelname 
+datasetname = 'mnist'
+resdir = 'diversity_exp/mobility/clustering_shift_new'+ modelname +datasetname
 dirname = resdir
-#os.mkdir(resdir)
+os.mkdir(resdir)
 test_time = 25
 n_clusters_max = 2
 m = 6
 #Size of the model
 modelsize = 160000
 Power = 0.1
-tries = 5
+tries = 50
 Pmax = 1 #Watt #5 Watt is a high. You can use 1 Watt as the max.
 Ttrain_batch = 0.005 #seconds , time to train on a batch of SGD 
 num_lanes = 6  
@@ -47,12 +48,12 @@ BW = 180000   # Bandwidth of a RB Hz
 sig2_dBm = -114 # additive white Gaussian noise (dB)
 sig2_watts = 10 ** ((sig2_dBm-30)/10) # additive white Gaussian noise (watts)
 NCHANNELS = 4
-Nmax = 2
+Nmax = 4
 fileinfo = resdir+'/exp_info.txt'
 info = 'testime'+str(test_time)+'\nm',str(m)+'\n maxcluster'+str(n_clusters_max)+'\n model'+modelname
 with open(fileinfo,'w+') as f:
 	f.write(str(info))
-for i in range (tries):
+for i in range (2,tries):
 	expdir = resdir+'/exp'+str(i)
 	os.mkdir(expdir)
 	start_time = time.time()
@@ -143,7 +144,7 @@ for i in range (tries):
 		NotSelected = [i for i in range(args.num_users)]
 		for x in a:
 			NotSelected.remove(x)
-		
+
 		dict_heads, dict_followers = capacities(a, NotSelected, Nmax)
 		print(dict_heads, dict_followers)
 		Twait = 2
