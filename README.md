@@ -3,7 +3,7 @@
 Implementation of _"Clustered Vehicular Federated Learning: Process and Optimization"_
 
 This code builds on the implementation of  _Communication-Efficient Learning of Deep Networks from Decentralized Data_ available in [here](https://github.com/AshwinRJ/Federated-Learning-PyTorch) .
-The vehicular environment parameters used for the simulation are similar to [Resource allocation for D2D-enabled vehicular communications] (https://ieeexplore.ieee.org/abstract/document/7913583/?casa_token=PSYPrzyfBd0AAAAA:-SKi1BKb0ZVc692haL3bvuAlZoaqF5BHOgwdQ5_0XtMkwPHoaWz_hcqTko426MtS56XQ5JN_zA).
+The vehicular environment parameters used for the simulation are similar to the [paper](https://ieeexplore.ieee.org/abstract/document/7913583/?casa_token=PSYPrzyfBd0AAAAA:-SKi1BKb0ZVc692haL3bvuAlZoaqF5BHOgwdQ5_0XtMkwPHoaWz_hcqTko426MtS56XQ5JN_zA) Resource allocation for D2D-enabled vehicular communications.
 
 
 To run the different experiments, choose the desired options in the options file and then run the experiments as follows :
